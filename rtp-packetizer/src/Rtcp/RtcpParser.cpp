@@ -31,7 +31,7 @@ std::vector<RtcpPktVariant> ParseRtcp(const std::vector<uint8_t>& fullPacket)
 
         // rfc3550#section-6.4.1
         size_t pktSize{ static_cast<size_t>((cmnHeader->length + 1) * 4) };
-        assert((pktItr + pktSize) < fullPacket.end());
+        assert((pktItr + pktSize) <= fullPacket.end());
 
         // advance
         pktItr += static_cast<diffSize_t>(pktSize);
@@ -57,23 +57,15 @@ std::vector<RtcpPktVariant> ParseRtcp(const std::vector<uint8_t>& fullPacket)
                      itr < compoundPacket.begin() + static_cast<diffSize_t>(expectedSizeWithRBlocks);
                      itr += sizeof(RtcpReportBlock))
                 {
-                    std::span rawBlock{ itr, itr + sizeof(RtcpSenderReportHeader) };
+                    std::span rawBlock{ itr, itr + sizeof(RtcpReportBlock) };
                     RtcpReportBlock block{};
                     std::memcpy(&block, rawBlock.data(), rawBlock.size());
                     blocks.emplace_back(block);
                 }
 
-                //  optional profile extention
-                uint8_t optProfEtx{ 0 };
-                if (compoundPacket.size() > expectedSizeWithRBlocks)
-                {
-                    optProfEtx = compoundPacket[expectedSizeWithRBlocks + 1];
-                }
-
                 res.emplace_back(RtcpSenderReportPkt{
                     .header = header,
                     .rrBlocks = std::move(blocks),
-                    .optProfExt = optProfEtx,
                 });
                 break;
             }

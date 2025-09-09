@@ -18,14 +18,12 @@ struct RtcpSenderReportPkt
 {
     RtcpSenderReportHeader header;
     std::vector<RtcpReportBlock> rrBlocks;
-    uint8_t optProfExt;
 };
 
 struct RtcpReceiverReportPkt
 {
     RtcpReceiverReportHeader header;
     std::vector<RtcpReportBlock> blocks;
-    uint32_t optProfExt;
 };
 
 struct RtcpSdesVariantCname
