@@ -1,0 +1,17 @@
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "default",
+            "displayName": "GCC 14.2.1 x86_64-unknown-linux-gnu",
+            "description": "Using compilers: C = /run/current-system/sw/bin/gcc, CXX = /run/current-system/sw/bin/g++",
+            "binaryDir": "${sourceDir}/build/",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/install",
+                "CMAKE_C_COMPILER": "/run/current-system/sw/bin/gcc",
+                "CMAKE_CXX_COMPILER": "/run/current-system/sw/bin/g++",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        }
+    ]
+}
