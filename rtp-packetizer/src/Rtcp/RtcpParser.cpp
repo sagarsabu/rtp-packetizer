@@ -9,7 +9,10 @@
 #include "Rtcp/RtcpPackets.hpp"
 #include "Rtcp/RtcpSenderRr.hpp"
 
-std::vector<RtcpPktVariant> Parse(const std::vector<uint8_t>& fullPacket)
+namespace rtp
+{
+
+std::vector<RtcpPktVariant> ParseRtcp(const std::vector<uint8_t>& fullPacket)
 {
     std::vector<RtcpPktVariant> res{};
 
@@ -85,3 +88,5 @@ std::vector<RtcpPktVariant> Parse(const std::vector<uint8_t>& fullPacket)
 
     return res;
 }
+
+} // namespace rtp

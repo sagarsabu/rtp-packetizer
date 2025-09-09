@@ -4,6 +4,9 @@
 #include <endian.h>
 #include "Rtcp/RtcpHeader.hpp"
 
+namespace rtp
+{
+
 enum RtcpSdesType : uint8_t
 {
     Cname = 1,
@@ -171,3 +174,5 @@ struct [[gnu::packed]] RtcpSdesPriv
     uint8_t length;
     uint8_t prefixLength;
 };
+
+} // namespace rtp

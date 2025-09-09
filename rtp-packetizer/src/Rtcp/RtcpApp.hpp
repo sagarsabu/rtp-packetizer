@@ -5,6 +5,9 @@
 #include <endian.h>
 #include "Rtcp/RtcpHeader.hpp"
 
+namespace rtp
+{
+
 /**
 APP: Application-Defined RTCP Packet
 
@@ -27,3 +30,5 @@ struct [[gnu::packed]] RtcpApp
     uint32_t ssrc;
     std::array<char, 4> name;
 };
+
+} // namespace rtp

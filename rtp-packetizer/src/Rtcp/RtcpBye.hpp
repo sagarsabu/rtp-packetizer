@@ -4,6 +4,9 @@
 #include <endian.h>
 #include "Rtcp/RtcpHeader.hpp"
 
+namespace rtp
+{
+
 /**
 BYE: Goodbye RTCP Packet
 
@@ -25,3 +28,5 @@ struct [[gnu::packed]] RtcpBye
     RtcpHeader cmnHdr;
     uint32_t ssrc;
 };
+
+} // namespace rtp

@@ -3,6 +3,9 @@
 #include <cstdint>
 #include <endian.h>
 
+namespace rtp
+{
+
 enum RtcpType : uint8_t
 {
     SenderRR = 200,
@@ -68,8 +71,4 @@ struct [[gnu::packed]] RtcpReportBlock
     uint32_t delayLastSr;
 };
 
-#if __BYTE_ORDER == __BIG_ENDIAN
-
-#else
-
-#endif
+} // namespace rtp

@@ -3,6 +3,9 @@
 #include <cstdint>
 #include <endian.h>
 
+namespace rtp
+{
+
 /**
 
 RTP Header
@@ -50,8 +53,4 @@ struct [[gnu::packed]] RptHeader
     uint32_t csrc;
 };
 
-#if __BYTE_ORDER == __BIG_ENDIAN
-
-#else
-
-#endif
+} // namespace rtp

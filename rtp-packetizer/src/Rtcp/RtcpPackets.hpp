@@ -11,6 +11,9 @@
 #include "Rtcp/RtcpSdes.hpp"
 #include "Rtcp/RtcpSenderRr.hpp"
 
+namespace rtp
+{
+
 struct RtcpSenderReportPkt
 {
     RtcpSenderReportHeader header;
@@ -105,3 +108,5 @@ struct RtcpAppPkt
 };
 
 using RtcpPktVariant = std::variant<RtcpSenderReportPkt, RtcpReceiverReportPkt, RtcpSdesPkt, RtcpByePkt, RtcpAppPkt>;
+
+} // namespace rtp

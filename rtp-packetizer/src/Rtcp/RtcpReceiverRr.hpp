@@ -1,6 +1,9 @@
 #include <endian.h>
 #include "Rtcp/RtcpHeader.hpp"
 
+namespace rtp
+{
+
 /**
 RR: Receiver Report RTCP Packet
 
@@ -36,3 +39,5 @@ struct [[gnu::packed]] RtcpReceiverReportHeader
     RtcpHeader cmnHdr;
     uint32_t ssrc;
 };
+
+} // namespace rtp

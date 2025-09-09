@@ -4,6 +4,9 @@
 #include <endian.h>
 #include "Rtcp/RtcpHeader.hpp"
 
+namespace rtp
+{
+
 /**
 SR: Sender Report RTCP Packet
 
@@ -54,3 +57,5 @@ struct [[gnu::packed]] RtcpSenderReportHeader
     uint32_t senderPktCnt;
     uint32_t senderOctetCnt;
 };
+
+} // namespace rtp
