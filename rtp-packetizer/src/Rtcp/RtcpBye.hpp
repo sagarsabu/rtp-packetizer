@@ -23,7 +23,7 @@ BYE: Goodbye RTCP Packet
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-struct [[gnu::packed]] RtcpBye
+struct [[gnu::packed]] RtcpByeHeader
 {
     RtcpHeader cmnHdr;
     uint32_t ssrc;

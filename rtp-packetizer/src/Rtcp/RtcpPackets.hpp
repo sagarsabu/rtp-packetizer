@@ -23,7 +23,7 @@ struct RtcpSenderReportPkt
 struct RtcpReceiverReportPkt
 {
     RtcpReceiverReportHeader header;
-    std::vector<RtcpReportBlock> blocks;
+    std::vector<RtcpReportBlock> rrBlocks;
 };
 
 struct RtcpSdesVariantCname
@@ -95,13 +95,13 @@ struct RtcpSdesPkt
 
 struct RtcpByePkt
 {
-    RtcpBye header;
-    std::string optLeaveReason;
+    RtcpByeHeader header;
+    // std::string optLeaveReason;
 };
 
 struct RtcpAppPkt
 {
-    RtcpApp header;
+    RtcpAppHeader header;
     std::vector<uint8_t> data;
 };
 

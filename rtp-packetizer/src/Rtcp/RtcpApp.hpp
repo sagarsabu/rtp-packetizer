@@ -24,7 +24,7 @@ APP: Application-Defined RTCP Packet
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-struct [[gnu::packed]] RtcpApp
+struct [[gnu::packed]] RtcpAppHeader
 {
     RtcpHeader cmnHdr;
     uint32_t ssrc;

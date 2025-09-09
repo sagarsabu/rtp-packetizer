@@ -3,91 +3,201 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 #include <span>
 #include <utility>
 #include <vector>
 #include "Rtcp/RtcpParser.hpp"
+#include "Rtcp/RtcpApp.hpp"
+#include "Rtcp/RtcpBye.hpp"
 #include "Rtcp/RtcpHeader.hpp"
 #include "Rtcp/RtcpPackets.hpp"
+#include "Rtcp/RtcpSdes.hpp"
 #include "Rtcp/RtcpSenderRr.hpp"
 
 namespace rtp
 {
 
+using PktSpan = decltype(std::span{ std::vector<uint8_t>().cbegin(), std::vector<uint8_t>().cend() });
+using DiffSize = std::vector<uint8_t>::difference_type;
+
+std::optional<RtcpSenderReportPkt> ParseSenderReportPkt(PktSpan rawPkt)
+{
+    if (rawPkt.size() < sizeof(RtcpSenderReportHeader))
+    {
+        return std::nullopt;
+    }
+
+    RtcpSenderReportPkt pkt{};
+    std::memcpy(&pkt.header, rawPkt.data(), sizeof(RtcpSenderReportHeader));
+
+    // max 32 report blocks
+    size_t nRRBlocks{ std::min<size_t>(pkt.header.cmnHdr.receptionCount, 31) };
+    size_t expectedSizeWithRRBlocks{ (nRRBlocks * sizeof(RtcpReportBlock)) + sizeof(RtcpSenderReportHeader) };
+    if (rawPkt.size() < expectedSizeWithRRBlocks)
+    {
+        return std::nullopt;
+    }
+
+    pkt.rrBlocks.reserve(nRRBlocks);
+
+    for (auto itr{ rawPkt.begin() + sizeof(RtcpSenderReportHeader) };
+         itr < rawPkt.begin() + static_cast<DiffSize>(expectedSizeWithRRBlocks);
+         itr += sizeof(RtcpReportBlock))
+    {
+        std::span rawBlock{ itr, itr + sizeof(RtcpReportBlock) };
+        RtcpReportBlock block{};
+        std::memcpy(&block, rawBlock.data(), rawBlock.size());
+        pkt.rrBlocks.emplace_back(block);
+    }
+
+    return std::make_optional(std::move(pkt));
+}
+
+std::optional<RtcpReceiverReportPkt> ParseReceiverReportPkt(PktSpan rawPkt)
+{
+    if (rawPkt.size() < sizeof(RtcpReceiverReportHeader))
+    {
+        return std::nullopt;
+    }
+
+    RtcpReceiverReportPkt pkt{};
+    std::memcpy(&pkt.header, rawPkt.data(), sizeof(RtcpReceiverReportHeader));
+
+    // max 32 report blocks
+    size_t nRRBlocks{ std::min<size_t>(pkt.header.cmnHdr.receptionCount, 31) };
+    size_t expectedSizeWithRRBlocks{ (nRRBlocks * sizeof(RtcpReportBlock)) + sizeof(RtcpReceiverReportHeader) };
+    if (rawPkt.size() < expectedSizeWithRRBlocks)
+    {
+        return std::nullopt;
+    }
+
+    pkt.rrBlocks.reserve(nRRBlocks);
+
+    for (auto itr{ rawPkt.begin() + sizeof(RtcpReceiverReportHeader) };
+         itr < rawPkt.begin() + static_cast<DiffSize>(expectedSizeWithRRBlocks);
+         itr += sizeof(RtcpReportBlock))
+    {
+        std::span rawBlock{ itr, itr + sizeof(RtcpReportBlock) };
+        RtcpReportBlock block{};
+        std::memcpy(&block, rawBlock.data(), rawBlock.size());
+        pkt.rrBlocks.emplace_back(block);
+    }
+
+    return std::make_optional(std::move(pkt));
+}
+
+std::optional<RtcpSdesPkt> ParseSdesPkt(PktSpan rawPkt)
+{
+    if (rawPkt.size() < sizeof(RtcpSdesHeader))
+    {
+        return std::nullopt;
+    }
+
+    // TODO
+    return std::nullopt;
+}
+
+std::optional<RtcpByePkt> ParseByePkt(PktSpan rawPkt)
+{
+    if (rawPkt.size() < sizeof(RtcpByeHeader))
+    {
+        return std::nullopt;
+    }
+
+    RtcpByePkt pkt{};
+    std::memcpy(&pkt.header, rawPkt.data(), sizeof(RtcpByeHeader));
+    return std::make_optional(pkt);
+}
+
+std::optional<RtcpAppPkt> ParseAppPkt(PktSpan rawPkt)
+{
+    if (rawPkt.size() < sizeof(RtcpAppHeader))
+    {
+        return std::nullopt;
+    }
+
+    RtcpAppPkt pkt{};
+    std::memcpy(&pkt.header, rawPkt.data(), sizeof(RtcpAppHeader));
+    pkt.data = { rawPkt.begin() + sizeof(RtcpAppHeader), rawPkt.end() };
+
+    return std::make_optional(std::move(pkt));
+}
+
 std::vector<RtcpPktVariant> ParseRtcp(const std::vector<uint8_t>& fullPacket)
 {
-    using diffSize_t = std::vector<uint8_t>::difference_type;
-
     std::vector<RtcpPktVariant> res{};
 
     auto pktItr{ fullPacket.begin() };
     while (pktItr < fullPacket.end())
     {
-        std::span compoundPacket{ pktItr, fullPacket.end() };
-        assert(compoundPacket.size() >= sizeof(RtcpHeader));
+        PktSpan compoundPacket{ pktItr, fullPacket.end() };
+        if (compoundPacket.size() < sizeof(RtcpHeader))
+        {
+            return {};
+        }
 
         const auto* const cmnHeader{ reinterpret_cast<const RtcpHeader*>(compoundPacket.data()) };
-        assert(cmnHeader->version == 2);
+        if (cmnHeader->version != 2)
+        {
+            return {};
+        }
 
         // rfc3550#section-6.4.1
-        size_t pktSize{ static_cast<size_t>((cmnHeader->length + 1) * 4) };
-        assert((pktItr + pktSize) <= fullPacket.end());
+        auto pktSize{ static_cast<DiffSize>((cmnHeader->length + 1) * 4) };
+        if ((pktItr + pktSize) > fullPacket.end())
+        {
+            return {};
+        }
 
         // advance
-        pktItr += static_cast<diffSize_t>(pktSize);
+        pktItr += pktSize;
 
         switch (cmnHeader->pktType)
         {
             case RtcpType::SenderRR:
             {
-                assert(compoundPacket.size() >= sizeof(RtcpSenderReportHeader));
-
-                RtcpSenderReportHeader header{};
-                std::memcpy(&header, compoundPacket.data(), sizeof(RtcpSenderReportHeader));
-
-                // max 32 report blocks
-                size_t nRBlocks{ std::min<size_t>(header.cmnHdr.receptionCount, 31) };
-                size_t expectedSizeWithRBlocks{ (nRBlocks * sizeof(RtcpReportBlock)) + sizeof(RtcpSenderReportHeader) };
-                assert(compoundPacket.size() >= expectedSizeWithRBlocks);
-
-                std::vector<RtcpReportBlock> blocks{};
-                blocks.reserve(nRBlocks);
-
-                for (auto itr{ compoundPacket.begin() + sizeof(RtcpSenderReportHeader) };
-                     itr < compoundPacket.begin() + static_cast<diffSize_t>(expectedSizeWithRBlocks);
-                     itr += sizeof(RtcpReportBlock))
+                if (auto pkt{ ParseSenderReportPkt(compoundPacket) })
                 {
-                    std::span rawBlock{ itr, itr + sizeof(RtcpReportBlock) };
-                    RtcpReportBlock block{};
-                    std::memcpy(&block, rawBlock.data(), rawBlock.size());
-                    blocks.emplace_back(block);
+                    res.emplace_back(std::move(*pkt));
                 }
-
-                res.emplace_back(RtcpSenderReportPkt{
-                    .header = header,
-                    .rrBlocks = std::move(blocks),
-                });
                 break;
             }
             case RtcpType::ReceiverRR:
             {
+                if (auto pkt{ ParseReceiverReportPkt(compoundPacket) })
+                {
+                    res.emplace_back(std::move(*pkt));
+                }
                 break;
             }
             case RtcpType::Sdes:
             {
+                if (auto pkt{ ParseSdesPkt(compoundPacket) })
+                {
+                    res.emplace_back(std::move(*pkt));
+                }
                 break;
             }
             case RtcpType::Bye:
             {
+                if (auto pkt{ ParseByePkt(compoundPacket) })
+                {
+                    res.emplace_back(*pkt);
+                }
                 break;
             }
             case RtcpType::App:
             {
+                if (auto pkt{ ParseAppPkt(compoundPacket) })
+                {
+                    res.emplace_back(std::move(*pkt));
+                }
                 break;
             }
             default:
             {
-                assert(false);
+                // skip unknown
                 break;
             }
         }
