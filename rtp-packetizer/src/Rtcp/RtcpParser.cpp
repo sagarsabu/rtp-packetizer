@@ -2,7 +2,9 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <span>
+#include <utility>
 #include <vector>
 #include "Rtcp/RtcpParser.hpp"
 #include "Rtcp/RtcpHeader.hpp"
@@ -14,6 +16,8 @@ namespace rtp
 
 std::vector<RtcpPktVariant> ParseRtcp(const std::vector<uint8_t>& fullPacket)
 {
+    using diffSize_t = std::vector<uint8_t>::difference_type;
+
     std::vector<RtcpPktVariant> res{};
 
     auto pktItr{ fullPacket.begin() };
@@ -22,7 +26,7 @@ std::vector<RtcpPktVariant> ParseRtcp(const std::vector<uint8_t>& fullPacket)
         std::span compoundPacket{ pktItr, fullPacket.end() };
         assert(compoundPacket.size() >= sizeof(RtcpHeader));
 
-        const auto cmnHeader{ reinterpret_cast<const RtcpHeader*>(compoundPacket.data()) };
+        const auto* const cmnHeader{ reinterpret_cast<const RtcpHeader*>(compoundPacket.data()) };
         assert(cmnHeader->version == 2);
 
         // rfc3550#section-6.4.1
@@ -30,7 +34,7 @@ std::vector<RtcpPktVariant> ParseRtcp(const std::vector<uint8_t>& fullPacket)
         assert((pktItr + pktSize) < fullPacket.end());
 
         // advance
-        pktItr += static_cast<ssize_t>(pktSize);
+        pktItr += static_cast<diffSize_t>(pktSize);
 
         switch (cmnHeader->pktType)
         {
@@ -38,27 +42,38 @@ std::vector<RtcpPktVariant> ParseRtcp(const std::vector<uint8_t>& fullPacket)
             {
                 assert(compoundPacket.size() >= sizeof(RtcpSenderReportHeader));
 
-                const auto header{ reinterpret_cast<const RtcpSenderReportHeader*>(compoundPacket.data()) };
+                RtcpSenderReportHeader header{};
+                std::memcpy(&header, compoundPacket.data(), sizeof(RtcpSenderReportHeader));
+
                 // max 32 report blocks
-                size_t nReportBlocks{ std::min<size_t>(header->cmnHdr.receptionCount, 31) };
-                size_t expectedSize{ (nReportBlocks * sizeof(RtcpReportBlock)) + sizeof(RtcpSenderReportHeader) };
-                assert(expectedSize >= compoundPacket.size());
+                size_t nRBlocks{ std::min<size_t>(header.cmnHdr.receptionCount, 31) };
+                size_t expectedSizeWithRBlocks{ (nRBlocks * sizeof(RtcpReportBlock)) + sizeof(RtcpSenderReportHeader) };
+                assert(compoundPacket.size() >= expectedSizeWithRBlocks);
 
                 std::vector<RtcpReportBlock> blocks{};
-                blocks.reserve(nReportBlocks);
+                blocks.reserve(nRBlocks);
 
                 for (auto itr{ compoundPacket.begin() + sizeof(RtcpSenderReportHeader) };
-                     itr < compoundPacket.begin() + expectedSize;
+                     itr < compoundPacket.begin() + static_cast<diffSize_t>(expectedSizeWithRBlocks);
                      itr += sizeof(RtcpReportBlock))
                 {
-                    const auto block{ reinterpret_cast<const RtcpReportBlock*>(*itr) };
-                    blocks.emplace_back(*block);
+                    std::span rawBlock{ itr, itr + sizeof(RtcpSenderReportHeader) };
+                    RtcpReportBlock block{};
+                    std::memcpy(&block, rawBlock.data(), rawBlock.size());
+                    blocks.emplace_back(block);
+                }
+
+                //  optional profile extention
+                uint8_t optProfEtx{ 0 };
+                if (compoundPacket.size() > expectedSizeWithRBlocks)
+                {
+                    optProfEtx = compoundPacket[expectedSizeWithRBlocks + 1];
                 }
 
                 res.emplace_back(RtcpSenderReportPkt{
-                    .header = *header,
+                    .header = header,
                     .rrBlocks = std::move(blocks),
-                    .optProfExt = 0,
+                    .optProfExt = optProfEtx,
                 });
                 break;
             }
