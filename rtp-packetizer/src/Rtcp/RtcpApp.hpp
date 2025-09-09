@@ -1,27 +1,29 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <endian.h>
-#include "rtcp_header.hpp"
+#include "Rtcp/RtcpHeader.hpp"
 
 /**
-BYE: Goodbye RTCP Packet
+APP: Application-Defined RTCP Packet
 
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|V=2|P|    SC   |   PT=BYE=203  |             length            |
+|V=2|P| subtype |   PT=APP=204  |             length            |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                           SSRC/CSRC                           |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-:                              ...                              :
-+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-|     length    |               reason for leaving            ... (opt)
+|                          name (ASCII)                         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                   application-dependent data                ...
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-struct [[gnu::packed]] RtcpBye
+struct [[gnu::packed]] RtcpApp
 {
     RtcpHeader cmnHdr;
     uint32_t ssrc;
+    std::array<char, 4> name;
 };
